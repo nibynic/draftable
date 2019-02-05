@@ -1,3 +1,5 @@
+require 'factory_bot_rails'
+
 # Configure Rails Environment
 ENV["RAILS_ENV"] = "test"
 
@@ -18,4 +20,8 @@ if ActiveSupport::TestCase.respond_to?(:fixture_path=)
   ActionDispatch::IntegrationTest.fixture_path = ActiveSupport::TestCase.fixture_path
   ActiveSupport::TestCase.file_fixture_path = ActiveSupport::TestCase.fixture_path + "/files"
   ActiveSupport::TestCase.fixtures :all
+end
+
+class ActiveSupport::TestCase
+  include FactoryBot::Syntax::Methods
 end
