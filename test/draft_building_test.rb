@@ -25,15 +25,6 @@ class Draftable::DraftBuildingTest < ActiveSupport::TestCase
     assert_equal master.master_drafts, draft_2.master_drafts
   end
 
-  test "it skips blacklisted methods" do
-    author = create(:user)
-    master = create(:post, title: "Sample post", content: "Post content")
-    draft = master.to_draft(author, except: [:content])
-
-    assert_equal "Sample post", draft.title
-    assert_nil draft.content
-  end
-
   test "it copies belongs_to relationships" do
     author = create(:user)
     master = create(:comment,
