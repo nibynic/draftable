@@ -20,9 +20,6 @@ class Draftable::DraftBuildingTest < ActiveSupport::TestCase
 
     assert_equal false, master.draft?
     assert_equal true, master.master?
-
-    assert_equal master.drafts, draft_2.master_drafts
-    assert_equal master.master_drafts, draft_2.master_drafts
   end
 
   test "it copies belongs_to relationships" do
