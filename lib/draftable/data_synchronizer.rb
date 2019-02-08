@@ -6,23 +6,26 @@ module Draftable
 
     attr_reader :source, :destination, :previous_state, :current_state, :key_map, :cache
 
-    def initialize(source, destination, force = false)
+    def initialize(source, destination)
       @source = source
       @destination = destination
 
+
       @previous_state = full_snapshot(source)
 
-      snapshot = full_snapshot(destination)
-      @key_map = snapshot.each.map do |draft, snapshot|
+      mode = destination.persisted? ? (source.master? ? :down : :up) : :full
+      destination_state = full_snapshot(destination, mode)
+      forced_keys = destination.class.draftable_rules[mode][:force]
+      @key_map = destination_state.each.map do |draft, snapshot|
         previous_snapshot = previous_state[draft.draft_master]
         allowed_keys = snapshot.each.select do |key, draft_value|
           previous_value = previous_snapshot[key] if previous_snapshot.present?
-          force || draft_value == previous_value
+          forced_keys.include?(key) || draft_value == previous_value
         end.map &:first
         [draft, allowed_keys]
       end.to_h
 
-      @cache = snapshot.map { |r, data| [r.draft_master, r] }.to_h
+      @cache = destination_state.map { |r, data| [r.draft_master, r] }.to_h
     end
 
     def synchronize

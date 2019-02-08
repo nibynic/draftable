@@ -1,18 +1,56 @@
-require_relative "data_syncing"
-require_relative "draft_building"
-require_relative "options_normalization"
+require_relative "data_synchronizer"
+require_relative "rule_parser"
 
 module Draftable
   module ActsAsDraftable
     extend ActiveSupport::Concern
 
     class_methods do
-      def acts_as_draftable(options = {})
-        include Draftable::DataSyncing
-        include Draftable::DraftBuilding
-        include Draftable::OptionsNormalization
-
+      def acts_as_draftable(options = nil)
+        include ModelExtension
         @draftable_options = options
+      end
+    end
+
+    module ModelExtension
+      extend ActiveSupport::Concern
+
+      included do
+        def self.draftable_rules
+          @draftable_rules ||= RuleParser.new(self, @draftable_options).parse
+        end
+
+        belongs_to :draft_author, optional: true, polymorphic: true
+        belongs_to :draft_master, optional: true, class_name: self.name
+        has_many :drafts, class_name: self.name, foreign_key: :draft_master_id, dependent: :nullify
+
+        scope :draft, -> { where.not(draft_author_id: nil) }
+        scope :master, -> { where(draft_author_id: nil) }
+      end
+
+      def master?
+        draft_author.nil?
+      end
+
+      def draft?
+        draft_author.present?
+      end
+
+      def to_draft(author)
+        drafts.find_by(draft_author: author) || begin
+          draft = drafts.build(draft_author: author)
+          DataSynchronizer.new(self, draft).synchronize
+          draft
+        end
+      end
+
+      def with_drafts(&block)
+        synchronizers = drafts.map do |draft|
+          DataSynchronizer.new(self, draft)
+        end
+        result = block.call
+        synchronizers.map(&:synchronize) if result
+        result
       end
     end
   end

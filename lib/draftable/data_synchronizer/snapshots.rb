@@ -21,11 +21,13 @@ module Draftable
       data
     end
 
-    def full_snapshot(record)
+    def full_snapshot(record, mode = :full)
       dict = {}
       traverse(record) do |related|
-        dict[related] = snapshot(related, related.class.draftable_methods)
-        related.class.draftable_methods
+        rule = related.class.draftable_rules[mode]
+        keys = rule[:merge] + rule[:force]
+        dict[related] = snapshot(related, keys)
+        keys
       end
       dict
     end
