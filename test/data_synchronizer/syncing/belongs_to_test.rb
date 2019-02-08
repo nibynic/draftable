@@ -1,9 +1,35 @@
 require 'test_helper'
 
-module DataSyncing
-  module Down
+module DataSynchronizer
+  module Syncing
 
     class BelongsToTest < ActiveSupport::TestCase
+      test "it copies belongs_to relationships" do
+        author = create(:user)
+        master = create(:comment,
+          post: create(:post, content: "Hi everyone"),
+          user: create(:user)
+        )
+        draft = master.to_draft(author)
+
+        # should create drafts for draftable models
+
+        master_post = master.post
+        draft_post = draft.post
+
+        assert_not_equal master_post, draft_post
+        assert_equal author, draft_post.draft_author
+        assert_equal master_post, draft_post.draft_master
+        assert_equal "Hi everyone", draft_post.content
+
+        # should copy relationship with non-draftable models
+
+        master_user = master.user
+        draft_user = draft.user
+
+        assert_equal master_user, draft_user
+      end
+
       test "it updates attributes" do
         author = create(:user)
         master_post = create(:post)
@@ -85,6 +111,6 @@ module DataSyncing
         assert_nil draft_post.draft_master
       end
     end
-    
+
   end
 end

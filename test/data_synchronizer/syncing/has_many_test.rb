@@ -1,9 +1,33 @@
 require 'test_helper'
 
-module DataSyncing
-  module Down
+module DataSynchronizer
+  module Syncing
 
     class HasManyTest < ActiveSupport::TestCase
+
+      test "it copies has_many relationships" do
+        author = create(:user)
+        master = create(:post,
+          comments: [create(:comment, content: "First!!1")],
+          photos: [create(:photo)]
+        )
+        draft = master.to_draft(author)
+
+        # should create drafts for draftable models
+
+        master_comment = master.comments.first
+        draft_comment = draft.comments.first
+
+        assert_not_equal master_comment, draft_comment
+        assert_equal author, draft_comment.draft_author
+        assert_equal master_comment, draft_comment.draft_master
+        assert_equal "First!!1", draft_comment.content
+
+        # should skip relationship with non-draftable models
+
+        assert_equal [], draft.photos
+      end
+
       test "it updates attributes" do
         author = create(:user)
         master_comment = create(:comment, content: "Sample content")

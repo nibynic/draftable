@@ -1,9 +1,36 @@
 require 'test_helper'
 
-module DataSyncing
-  module Down
+module DataSynchronizer
+  module Syncing
 
     class HasAndBelongsToManyTest < ActiveSupport::TestCase
+
+      test "it copies has_and_belongs_to_many relationships" do
+        author = create(:user)
+        master = create(:post,
+          tags: [create(:tag, name: "Travel")],
+          blogs: [create(:blog)]
+        )
+        draft = master.to_draft(author)
+
+        # should create drafts for draftable models
+
+        master_tag = master.tags.first
+        draft_tag = draft.tags.first
+
+        assert_not_equal master_tag, draft_tag
+        assert_equal author, draft_tag.draft_author
+        assert_equal master_tag, draft_tag.draft_master
+        assert_equal "Travel", draft_tag.name
+
+        # should copy relationship with non-draftable models
+
+        master_blog = master.blogs.first
+        draft_blog = draft.blogs.first
+
+        assert_equal master_blog, draft_blog
+      end
+
       test "it updates attributes" do
         author = create(:user)
         master_tag = create(:tag, name: "Sample name")

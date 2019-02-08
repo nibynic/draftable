@@ -1,7 +1,7 @@
 require 'test_helper'
 
-module DataSyncing
-  module Down
+module DataSynchronizer
+  module Syncing
 
     class SelfTest < ActiveSupport::TestCase
       test "it updates attributes" do
