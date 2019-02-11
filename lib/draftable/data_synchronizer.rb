@@ -4,28 +4,32 @@ module Draftable
   class DataSynchronizer
     include Snapshots
 
-    attr_reader :source, :destination, :previous_state, :current_state, :key_map, :cache
+    attr_reader :source, :destination, :previous_state, :current_state, :key_map,
+      :cache, :rules_map, :author
 
-    def initialize(source, destination)
+    def initialize(source, destination, rules_map = {})
       @source = source
       @destination = destination
-
+      @rules_map = rules_map
+      @author = source.draft? ? source.draft_author : destination.draft_author
 
       @previous_state = full_snapshot(source)
 
       mode = destination.persisted? ? (source.master? ? :down : :up) : :full
       destination_state = full_snapshot(destination, mode)
-      forced_keys = destination.class.draftable_rules[mode][:force]
-      @key_map = destination_state.each.map do |draft, snapshot|
-        previous_snapshot = previous_state[draft.draft_master]
-        allowed_keys = snapshot.each.select do |key, draft_value|
+      forced_keys = rules_for(destination.class)[mode][:force]
+      @key_map = destination_state.each.map do |destination_record, snapshot|
+        previous_snapshot = previous_state[reflect(destination_record)]
+        allowed_keys = snapshot.each.select do |key, destination_value|
           previous_value = previous_snapshot[key] if previous_snapshot.present?
-          forced_keys.include?(key) || draft_value == previous_value
+          forced_keys.include?(key) || destination_value == previous_value
         end.map &:first
-        [draft, allowed_keys]
+        [destination_record, allowed_keys]
       end.to_h
 
-      @cache = destination_state.map { |r, data| [r.draft_master, r] }.to_h
+      @cache = destination_state.map do |destination_record, data|
+        [reflect(destination_record), destination_record]
+      end.to_h
     end
 
     def synchronize
@@ -36,32 +40,31 @@ module Draftable
         @current_state = {}
       end
 
-      draft_root = destination
-      author = draft_root.draft_author
+
       save_queue = []
 
       # create & update
-      traverse(draft_root) do |draft|
+      traverse(destination) do |destination_record|
 
-        master = draft.draft_master
-        if master.present? && current_state[master].present?
+        source_record = reflect(destination_record)
+        if source_record.present? && current_state[source_record].present?
 
-          current_snapshot = current_state[master]
-          allowed_keys = key_map[draft] || current_snapshot.keys
+          current_snapshot = current_state[source_record]
+          allowed_keys = key_map[destination_record] || current_snapshot.keys
 
           new_data = {}
           current_snapshot.slice(*allowed_keys).each do |key, current_value|
-            reflection = draft.class.reflect_on_association(key)
+            reflection = destination_record.class.reflect_on_association(key)
             if reflection.present?
               if reflection.collection?
                 allow_copy = reflection.macro == :has_and_belongs_to_many
                 new_data[key] = current_value.map do |v|
-                  materialize_draft(v, author, allow_copy, draft.send(key).method(:build), cache)
+                  materialize_as_destination(v, allow_copy, destination_record.send(key).method(:build), cache)
                 end.compact
               else
                 allow_copy = reflection.macro == :belongs_to
                 if current_value.present?
-                  new_data[key] = materialize_draft(current_value, author, allow_copy, draft.method("build_#{key}"), cache)
+                  new_data[key] = materialize_as_destination(current_value, allow_copy, destination_record.method("build_#{key}"), cache)
                 else
                   new_data[key] = nil
                 end
@@ -70,8 +73,9 @@ module Draftable
               new_data[key] = current_value
             end
           end
-          draft.assign_attributes(new_data)
-          save_queue << draft
+          destination_record.assign_attributes(new_data)
+
+          save_queue << destination_record
 
         end
 
@@ -82,11 +86,11 @@ module Draftable
       save_queue.map &:save
 
       # destroy
-      (previous_state.keys - current_state.keys).map do |master|
-        draft = cache[master]
-        drafted_keys = previous_state[master].keys - (key_map[draft] || [])
-        if draft.present? && drafted_keys.empty?
-          draft.destroy
+      (previous_state.keys - current_state.keys).map do |source_record|
+        destination_record = cache[source_record]
+        destination_changed_keys = previous_state[source_record].keys - (key_map[destination_record] || [])
+        if destination_record.present? && destination_changed_keys.empty?
+          destination_record.destroy
         end
       end
 
@@ -94,14 +98,33 @@ module Draftable
 
     private
 
-    def materialize_draft(master, author, allow_copy, builder, cache)
-      if master.respond_to?(:to_draft)
-        cache[master] ||=
-          master.drafts.find_by(draft_author: author) ||
-          builder.call(draft_master: master, draft_author: author)
+    def reflect(record)
+      record.draft? ?
+        record.draft_master :
+        (
+          record.drafts.find_by(draft_author: author) ||
+          record.drafts.find { |r| r.draft_author == author }
+        )
+    end
+
+    def materialize_as_destination(source_record, allow_copy, builder, cache)
+      if source_record.respond_to?(:to_draft)
+        if source_record.master? == destination.master?
+          source_record
+        else
+          cache[source_record] ||=
+            reflect(source_record) ||
+            (source_record.draft? ?
+              builder.call(drafts: [source_record]) :
+              builder.call(draft_master: source_record, draft_author: author))
+        end
       elsif allow_copy
-        master
+        source_record
       end
+    end
+
+    def rules_for(klass)
+      rules_map[klass] || klass.draftable_rules
     end
 
   end

@@ -24,7 +24,7 @@ module Draftable
     def full_snapshot(record, mode = :full)
       dict = {}
       traverse(record) do |related|
-        rule = related.class.draftable_rules[mode]
+        rule = rules_for(related.class)[mode]
         keys = rule[:merge] + rule[:force]
         dict[related] = snapshot(related, keys)
         keys

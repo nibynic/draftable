@@ -1,6 +1,6 @@
 require 'test_helper'
 
-module DataSynchronizer
+module Draftable
   class SnapshotsTest < ActiveSupport::TestCase
 
     class SnapshotsContainer
