@@ -69,10 +69,10 @@ draft.draft? # true
 model.master? # true
 ```
 
-To keep draft and master in sync, always wrap your updates in a `with_drafts` block:
+To keep draft and master in sync, always wrap your updates in a `sync_draftable` block:
 
 ```ruby
-model.with_drafts do
+model.sync_draftable do
   model.update_attributes(name: "New name")
 end
 

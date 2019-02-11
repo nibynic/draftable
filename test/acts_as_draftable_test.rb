@@ -1,4 +1,5 @@
 require 'test_helper'
+require "spy"
 
 module Draftable
   class ActsAsDraftableTest < ActiveSupport::TestCase
@@ -23,31 +24,64 @@ module Draftable
       assert_equal true, master.master?
     end
 
-    test "it synces drafts" do
+    test "it syncs drafts" do
       author = create(:user)
-      master = create(:post, title: "Sample title")
-      draft = create(:post, title: "Sample title", draft_master: master, draft_author: author)
+      master = create(:post)
+      draft = create(:post, draft_master: master, draft_author: author)
 
-      master.with_drafts do
+      new_spy = Spy.on(DataSynchronizer, :new).and_call_through
+      synchronize_spy = Spy.on_instance_method(DataSynchronizer, :synchronize)
+
+      master.sync_draftable do
         master.update_attributes(title: "New title")
       end
-      draft.reload
 
-      assert_equal "New title", draft.title
+      assert_equal [master, draft], new_spy.calls.first.args
+      assert_equal 1, synchronize_spy.calls.length
+
+      new_spy.unhook
+      synchronize_spy.unhook
     end
 
     test "it doesn't sync drafts if block returns false" do
       author = create(:user)
-      master = create(:post, title: "Sample title")
-      draft = create(:post, title: "Sample title", draft_master: master, draft_author: author)
+      master = create(:post)
+      draft = create(:post, draft_master: master, draft_author: author)
 
-      master.with_drafts do
+      new_spy = Spy.on(DataSynchronizer, :new).and_call_through
+      synchronize_spy = Spy.on_instance_method(DataSynchronizer, :synchronize)
+
+      master.sync_draftable do
         master.update_attributes(title: "New title")
         false
       end
-      draft.reload
 
-      assert_equal "Sample title", draft.title
+      assert_equal [master, draft], new_spy.calls.first.args
+      assert_equal 0, synchronize_spy.calls.length
+
+      new_spy.unhook
+      synchronize_spy.unhook
+    end
+
+    test "it syncs master and its drafts" do
+      author = create(:user)
+      master = create(:post)
+      draft_1 = create(:post, draft_master: master, draft_author: author)
+      draft_2 = create(:post, draft_master: master, draft_author: author)
+
+      new_spy = Spy.on(DataSynchronizer, :new).and_call_through
+      synchronize_spy = Spy.on_instance_method(DataSynchronizer, :synchronize)
+
+      draft_1.sync_draftable do
+        draft_1.update_attributes(title: "New title")
+      end
+
+      assert_equal [draft_1, master], new_spy.calls[0].args
+      assert_equal [master, draft_2], new_spy.calls[1].args
+      assert_equal 2, synchronize_spy.calls.length
+
+      new_spy.unhook
+      synchronize_spy.unhook
     end
 
   end

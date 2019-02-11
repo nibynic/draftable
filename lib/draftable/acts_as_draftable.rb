@@ -44,9 +44,17 @@ module Draftable
         end
       end
 
-      def with_drafts(&block)
-        synchronizers = drafts.map do |draft|
-          DataSynchronizer.new(self, draft)
+      def sync_draftable(&block)
+        if master?
+          synchronizers = drafts.map do |draft|
+            DataSynchronizer.new(self, draft)
+          end
+        else
+          synchronizers = [
+            (DataSynchronizer.new(self, draft_master) if draft_master.present?)
+          ].compact + (draft_master.try(:drafts) - [self]).map do |draft|
+            DataSynchronizer.new(draft_master, draft)
+          end
         end
         result = block.call
         synchronizers.map(&:synchronize) if result
