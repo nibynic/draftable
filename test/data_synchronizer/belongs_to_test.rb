@@ -5,6 +5,12 @@ module Draftable
   module BelongsTo
 
     class DownTest < ActiveSupport::TestCase
+
+      force_down = {
+        Post => RuleParser.new(Post, [{ up: :none, down: :force, except: [] }]).parse,
+        Comment => RuleParser.new(Comment, [{ up: :none, down: :force, except: [] }]).parse
+      }
+
       test "it copies belongs_to relationships" do
         author = create(:user)
         master = create(:comment,
@@ -82,6 +88,23 @@ module Draftable
         assert_nil draft_post.draft_master
       end
 
+      test "it force creates if relationship was modified" do
+        author = create(:user)
+        master = create(:comment, post: create(:post))
+        draft = create(:comment, post: create(:post), draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft, force_down)
+        master.update_attributes(post: create(:post, title: "Sample title"))
+        synchronizer.synchronize
+        master.reload
+        draft.reload
+        master_post = master.post
+        draft_post = draft.post
+
+        assert_equal master_post, draft_post.draft_master
+        assert_equal "Sample title", draft_post.title
+      end
+
       test "it destroys record" do
         author = create(:user)
         post = create(:post)
@@ -119,6 +142,11 @@ module Draftable
       merge_up = {
         Post => RuleParser.new(Post, [{ up: :merge, down: :none, except: [] }]).parse,
         Comment => RuleParser.new(Comment, [{ up: :merge, down: :none, except: [] }]).parse
+      }
+
+      force_up = {
+        Post => RuleParser.new(Post, [{ up: :force, down: :none, except: [] }]).parse,
+        Comment => RuleParser.new(Comment, [{ up: :force, down: :none, except: [] }]).parse
       }
 
       test "it updates attributes" do
@@ -170,6 +198,24 @@ module Draftable
 
         assert_equal previous_master_post, master_post
         assert_nil master_post.drafts.first
+      end
+
+      test "it force creates if relationship was modified" do
+        author = create(:user)
+        master = create(:comment, post: create(:post))
+        draft = create(:comment, post: create(:post), draft_master: master, draft_author: author)
+
+        previous_master_post = master.post
+        synchronizer = DataSynchronizer.new(draft, master, force_up)
+        draft.update_attributes(post: create(:post, title: "Sample title", draft_author: author))
+        synchronizer.synchronize
+        draft.reload
+        master.reload
+        draft_post = draft.post
+        master_post = master.post
+
+        assert_equal draft_post, master_post.drafts.first
+        assert_equal "Sample title", master_post.title
       end
 
       test "it destroys record" do

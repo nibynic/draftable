@@ -5,6 +5,11 @@ module Draftable
 
     class DownTest < ActiveSupport::TestCase
 
+      force_down = {
+        Post => RuleParser.new(Post, [{ up: :none, down: :force, except: [] }]).parse,
+        Tag => RuleParser.new(Tag, [{ up: :none, down: :force, except: [] }]).parse
+      }
+
       test "it copies has_and_belongs_to_many relationships" do
         author = create(:user)
         master = create(:post,
@@ -76,6 +81,22 @@ module Draftable
         assert_equal previous_draft_tags, draft.tags
       end
 
+      test "it force creates if relationship was modified" do
+        author = create(:user)
+        master = create(:post)
+        draft = create(:post, tags: [create(:tag)], draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft, force_down)
+        master.update_attributes(tags: [create(:tag, name: "Sample name")])
+        synchronizer.synchronize
+        draft.reload
+        master_tag = master.tags.first
+        draft_tag = draft.tags.first
+
+        assert_equal master_tag, draft_tag.draft_master
+        assert_equal "Sample name", draft_tag.name
+      end
+
       test "it destroys record" do
         author = create(:user)
         master_tag = create(:tag, name: "Sample name")
@@ -111,6 +132,11 @@ module Draftable
       merge_up = {
         Post => RuleParser.new(Post, [{ up: :merge, down: :none, except: [] }]).parse,
         Tag => RuleParser.new(Tag, [{ up: :merge, down: :none, except: [] }]).parse
+      }
+
+      force_up = {
+        Post => RuleParser.new(Post, [{ up: :force, down: :none, except: [] }]).parse,
+        Tag => RuleParser.new(Tag, [{ up: :force, down: :none, except: [] }]).parse
       }
 
       test "it updates attributes" do
@@ -156,6 +182,22 @@ module Draftable
         master.reload
 
         assert_equal previous_master_tags, master.tags
+      end
+
+      test "it force creates if relationship was modified" do
+        author = create(:user)
+        master = create(:post, tags: [create(:tag)])
+        draft = create(:post, draft_master: master, draft_author: author)
+        
+        synchronizer = DataSynchronizer.new(draft, master, force_up)
+        draft.update_attributes(tags: [create(:tag, name: "Sample name", draft_author: author)])
+        synchronizer.synchronize
+        master.reload
+        master_tag = master.tags.first
+        draft_tag = draft.tags.first
+
+        assert_equal draft_tag, master_tag.drafts.first
+        assert_equal "Sample name", master_tag.name
       end
 
       test "it destroys record" do
