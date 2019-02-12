@@ -1,8 +1,8 @@
 PATH
   remote: .
   specs:
-    Draftable (0.1.0)
-      rails (~> 5.2.2)
+    draftable (0.1.0)
+      rails (~> 5.2.0)
 
 GEM
   remote: https://rubygems.org/
@@ -126,7 +126,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  Draftable!
+  draftable!
   factory_bot_rails
   spy
   sqlite3
