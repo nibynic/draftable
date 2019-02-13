@@ -63,6 +63,24 @@ module Draftable
       synchronize_spy.unhook
     end
 
+    test "it creates master" do
+      author = create(:user)
+      draft = Post.new(draft_author: author)
+
+      new_spy = Spy.on(DataSynchronizer, :new).and_call_through
+      synchronize_spy = Spy.on_instance_method(DataSynchronizer, :synchronize)
+
+      draft.sync_draftable do
+        draft.save
+      end
+
+      assert_equal [draft, nil], new_spy.calls.first.args
+      assert_equal 1, synchronize_spy.calls.length
+
+      new_spy.unhook
+      synchronize_spy.unhook
+    end
+
     test "it syncs master and its drafts" do
       author = create(:user)
       master = create(:post)

@@ -8,6 +8,19 @@ module Draftable
         Post => RuleParser.new(Post, [{ up: :none, down: :force, except: [] }]).parse
       }
 
+      test "it creates record" do
+        author = create(:user)
+        master = create(:post, title: "Sample title")
+
+        assert_difference "Post.count", 1 do
+          synchronizer = DataSynchronizer.new(master, { draft_author: author })
+          synchronizer.synchronize
+        end
+        draft = master.drafts.first
+
+        assert_equal "Sample title", draft.title
+      end
+
       test "it updates attributes" do
         author = create(:user)
         master = create(:post, title: "Sample title", content: "Sample content")
@@ -81,6 +94,19 @@ module Draftable
       force_up = {
         Post => RuleParser.new(Post, [{ up: :force, down: :none, except: [] }]).parse
       }
+
+      test "it creates record" do
+        author = create(:user)
+        draft = create(:post, title: "Sample title", draft_author: author)
+
+        assert_difference "Post.count", 1 do
+          synchronizer = DataSynchronizer.new(draft, nil)
+          synchronizer.synchronize
+        end
+        master = draft.draft_master
+
+        assert_equal "Sample title", master.title
+      end
 
       test "it updates attributes" do
         author = create(:user)

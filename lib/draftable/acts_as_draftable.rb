@@ -21,8 +21,8 @@ module Draftable
         end
 
         belongs_to :draft_author, optional: true, polymorphic: true
-        belongs_to :draft_master, optional: true, class_name: self.name
-        has_many :drafts, class_name: self.name, foreign_key: :draft_master_id, dependent: :nullify
+        belongs_to :draft_master, optional: true, class_name: self.name, inverse_of: :drafts
+        has_many :drafts, class_name: self.name, foreign_key: :draft_master_id, inverse_of: :draft_master, dependent: :nullify
 
         scope :draft, -> { where.not(draft_author_id: nil) }
         scope :master, -> { where(draft_author_id: nil) }
@@ -51,8 +51,8 @@ module Draftable
           end
         else
           synchronizers = [
-            (DataSynchronizer.new(self, draft_master) if draft_master.present?)
-          ].compact + (draft_master.try(:drafts) - [self]).map do |draft|
+            DataSynchronizer.new(self, draft_master)
+          ] + ((draft_master.try(:drafts) || []) - [self]).map do |draft|
             DataSynchronizer.new(draft_master, draft)
           end
         end
