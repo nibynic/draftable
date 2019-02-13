@@ -88,7 +88,7 @@ def MyModel < ApplicationRecord
       down: :merge,
       only: ["first_name", "last_name", "tags"]
     }, {
-      up: :force,
+      up: { create: :force, update: :force },
       down: :force,
       except: []
     }
@@ -98,32 +98,44 @@ end
 
 `acts_as_draftable` method accepts an array of sync rules. These rules are parsed
 from top to bottom. Consecutive rules apply to only attributes that are left
-from preceding rules. Each rule can be defined by 3 of these 4 properties:
+from preceding rules. Each rule is defined by three of these properties:
 
-- `up` - conflict resolution strategy when syncing up, can be `:force`, `:merge`
-or `:none` (default),
-- `down` - conflict resolution strategy when syncing down, can be `:force`, `:merge`
-or `:none` (default),
+- `up` - conflict resolution strategy when syncing up, default `:none`,
+- `down` - conflict resolution strategy when syncing down, default `:none`,
 - `only` - whitelist of attribute and relationship names that should be synced.
 If defined, `except` param will be ignored. Default: `nil`,
 - `except` - blacklist of attribute and relationship names - they won't be synced.
 The rule will be applied for all names left. Default: `[]`.
+
+Conflict resolution strategies are defined by a hash with `create`, `update` and
+`destroy` keys (each defining a strategy for creating / updating / destroying record).
+Available strategies are:
+
+- `:force` - this will overwrite all data with source data,
+- `:merge` - update only these attributes that were the same in source and destination record,
+- `:none` - do nothing (default).
+
+If you pass a symbol instead of a hash it will be automatically expanded by applying
+same value in all three cases. E.g. `:force` will become
+`{ create: :force, update: :force, destroy: :force }`.
+
 
 By default Draftable uses only this one rule, which only merges data down:
 
 ```ruby
 {
   up: :none,
-  down: :merge,
+  down: { create: :force, update: :merge, destroy: :merge },
   except: []
 }
 ```
+#### Relationship copying
 
-When creating new records (both drafts and masters) Draftable will use a separate
-strategy that copies all data from source to destination (force method on all
-attributes). Relationship copying depends on association type and whether the source
-record is draftable or not. This mechanism ensures that non-draftable records
-are won't be hijacked by destination record.
+Draftable tries to copy data in all listed relationships. In some cases this
+cannot be done - e.g. simple copying has_many relationship from master to draft
+would hijack master records (related records would be attached to draft instead).
+To prevent this effect, relationship copying depends on association type and
+whether the source record is draftable or not.
 
 | Association             | Draftable                | Non-draftable |
 | ----------------------- | ------------------------ | ------------- |
@@ -131,7 +143,19 @@ are won't be hijacked by destination record.
 | has_many                | creates a draft / master | leaves empty  |
 | has_and_belongs_to_many | creates a draft / master | uses source   |
 
+#### Creating records
 
+Draftable will use `create` rules if destination record is not persisted.
+In this case `force` strategy will copy all listed attributes, while `merge`
+strategy will compare them with initial values. If no attributes match `create`
+rule, record will not be created.
+
+#### Destroying records
+
+Draftable will use `destroy` rules if source record is destroyed. In this case
+`force` strategy will always destroy destination record, while `merge` will compare
+listed attributes and destroy only if none of them was changed. If no attributes
+match `destroy` rule, record will not be destroyed.
 
 ## Contributing
 Contribution directions go here.

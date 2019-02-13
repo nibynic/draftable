@@ -100,7 +100,7 @@ module Draftable
         draft = create(:post, title: "Sample title", draft_author: author)
 
         assert_difference "Post.count", 1 do
-          synchronizer = DataSynchronizer.new(draft, nil)
+          synchronizer = DataSynchronizer.new(draft, nil, force_up)
           synchronizer.synchronize
         end
         master = draft.draft_master

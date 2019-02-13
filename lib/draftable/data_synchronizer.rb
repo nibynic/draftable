@@ -4,8 +4,8 @@ module Draftable
   class DataSynchronizer
     include Snapshots
 
-    attr_reader :source, :destination, :previous_state, :current_state, :key_map,
-      :rules_map, :author
+    attr_reader :source, :destination, :previous_state, :current_state,
+      :destination_state, :rules_map, :author, :direction
 
     def initialize(source, destination_or_params, rules_map = {})
       @source = source
@@ -22,19 +22,9 @@ module Draftable
       @rules_map = rules_map
       @author = source.draft? ? source.draft_author : destination.draft_author
 
+      @direction = source.master? ? :down : :up
       @previous_state = full_snapshot(source)
-
-      mode = destination.persisted? ? (source.master? ? :down : :up) : :full
-      destination_state = full_snapshot(destination, mode)
-      forced_keys = rules_for(destination.class)[mode][:force]
-      @key_map = destination_state.each.map do |destination_record, snapshot|
-        previous_snapshot = previous_state[reflect(destination_record)]
-        allowed_keys = snapshot.each.select do |key, destination_value|
-          previous_value = previous_snapshot[key] if previous_snapshot.present?
-          forced_keys.include?(key) || destination_value == previous_value
-        end.map &:first
-        [destination_record, allowed_keys]
-      end.to_h
+      @destination_state = full_snapshot(destination)
 
       destination_state.map do |destination_record, data|
         cache(reflect(destination_record)) { destination_record }
@@ -55,17 +45,19 @@ module Draftable
       traverse(destination) do |destination_record|
 
         source_record = reflect(destination_record)
-        if source_record.present? && current_state[source_record].present?
+        if source_record.present? && find_snapshot(current_state, source_record).present?
 
-          current_snapshot = current_state[source_record]
-          allowed_keys = key_map[destination_record] || current_snapshot.keys
+          current_snapshot = find_snapshot(current_state, source_record)
+          destination_snapshot = find_snapshot(destination_state, destination_record)
+          action = destination_record.persisted? ? :update : :create
+          allowed_keys = allowed_keys_for(destination_record, destination_snapshot, action)
 
           new_data = {}
           current_snapshot.slice(*allowed_keys).each do |key, current_value|
             reflection = destination_record.class.reflect_on_association(key)
             if reflection.present?
               if reflection.collection?
-                allow_copy = reflection.macro == :has_and_belongs_to_many
+                allow_copy = (reflection.macro == :has_and_belongs_to_many) || reflection.through_reflection.present?
                 new_data[key] = current_value.map do |v|
                   materialize_as_destination(v, allow_copy, destination_record.send(key).method(:build))
                 end.compact
@@ -96,9 +88,13 @@ module Draftable
       # destroy
       (previous_state.keys - current_state.keys).map do |source_record|
         destination_record = cache(source_record)
-        destination_changed_keys = previous_state[source_record].keys - (key_map[destination_record] || [])
-        if destination_record.present? && destination_changed_keys.empty?
-          destination_record.destroy
+        if destination_record.present?
+          destination_snapshot = find_snapshot(destination_state, destination_record)
+          allowed_keys = allowed_keys_for(destination_record, destination_snapshot, :destroy)
+          rule = rules_for(destination_record.class)[:destroy]
+          if (rule[:force] + rule[:merge] - allowed_keys).empty?
+            destination_record.destroy
+          end
         end
       end
 
@@ -107,12 +103,13 @@ module Draftable
     private
 
     def reflect(record)
-      record.draft? ?
+      cache(record) || (record.draft? ?
         record.draft_master :
         (
           record.drafts.find_by(draft_author: author) ||
           record.drafts.find { |r| r.draft_author == author }
         )
+      )
     end
 
     def materialize_as_destination(source_record, allow_copy, builder)
@@ -120,7 +117,6 @@ module Draftable
         if source_record.master? == destination.master?
           source_record
         else
-
           cache(source_record) do
             reflect(source_record) ||
             (source_record.draft? ?
@@ -134,18 +130,37 @@ module Draftable
     end
 
     def rules_for(klass)
-      rules_map[klass] || klass.draftable_rules
+      (rules_map[klass] || klass.draftable_rules)[direction]
     end
 
     def cache(record)
       @cache ||= []
-      @cache.find { |key, value| key == record }.try(:last) || begin
+      @cache.find { |key, value| key == record }.try(:last) ||
+      @cache.find { |key, value| value == record }.try(:first) || begin
         if block_given?
           value = yield
           @cache << [record, value]
           value
         end
       end
+    end
+
+    def find_snapshot(state, record)
+      state.find { |key, value| key == record }.try(:last)
+    end
+
+    def allowed_keys_for(record, destination_snapshot, action)
+      forced_keys = rules_for(record.class)[action][:force]
+      previous_snapshot = find_snapshot(previous_state, reflect(record))
+      current_snapshot = find_snapshot(current_state, reflect(record))
+      (destination_snapshot || previous_snapshot || current_snapshot).each.select do |key, destination_value|
+        if previous_snapshot.present?
+          previous_value = previous_snapshot[key]
+          forced_keys.include?(key) || destination_value == previous_value
+        else
+          true
+        end
+      end.map &:first
     end
 
   end

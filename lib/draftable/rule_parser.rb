@@ -5,7 +5,7 @@ module Draftable
     def initialize(klass, rules = nil)
       @rules = rules || [{
         up: :none,
-        down: :merge,
+        down: { create: :force, update: :merge, destroy: :merge },
         except: []
       }]
       @klass = klass
@@ -13,9 +13,16 @@ module Draftable
 
     def parse
       key_map = {
-        up:   { force: [], merge: [] },
-        down: { force: [], merge: [] },
-        full: { force: all_keys, merge: [] }
+        up:   {
+          create:   { force: [], merge: [] },
+          update:   { force: [], merge: [] },
+          destroy:  { force: [], merge: [] }
+        },
+        down: {
+          create:   { force: [], merge: [] },
+          update:   { force: [], merge: [] },
+          destroy:  { force: [], merge: [] }
+        }
       }
 
       keys_left = all_keys
@@ -25,11 +32,12 @@ module Draftable
         else
           keys = keys_left - normalize_array(rule[:except])
         end
-        if [:force, :merge].include?(rule[:up])
-          key_map[:up][rule[:up]] += keys
-        end
-        if [:force, :merge].include?(rule[:down])
-          key_map[:down][rule[:down]] += keys
+        [:up, :down].each do |direction|
+          normalize_strategy(rule[direction]).each do |action, strategy|
+            if [:force, :merge].include?(strategy)
+              key_map[direction][action][strategy] += keys
+            end
+          end
         end
         keys_left -= keys
       end
@@ -57,6 +65,22 @@ module Draftable
       value = [value] unless value.is_a? Array
       value.map! &:to_s
       value
+    end
+
+    def normalize_strategy(hash_or_symbol)
+      if hash_or_symbol.is_a? Hash
+        {
+          create: :none,
+          update: :none,
+          destroy: :none
+        }.merge(hash_or_symbol)
+      else
+        {
+          create: hash_or_symbol,
+          update: hash_or_symbol,
+          destroy: hash_or_symbol
+        }
+      end
     end
   end
 end
