@@ -63,7 +63,7 @@ module Draftable
 
     def normalize_array(value = [])
       value = [value] unless value.is_a? Array
-      value.map! &:to_s
+      value.map!(&:to_s)
       value
     end
 

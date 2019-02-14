@@ -2,7 +2,7 @@ module Draftable
   module Snapshots
 
     def snapshot(record, keys = [])
-      keys = keys.map &:to_s
+      keys = keys.map(&:to_s)
       data = {}.merge(
         record.attributes.slice(*keys)
       )
@@ -36,7 +36,7 @@ module Draftable
 
     def traverse(record, visited = [], &block)
       visited << record
-      keys = (yield(record) || []).map &:to_s
+      keys = (yield(record) || []).map(&:to_s)
       record.class.reflect_on_all_associations.each do |reflection|
         if keys.include?(reflection.name.to_s)
           if reflection.collection?

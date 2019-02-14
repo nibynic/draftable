@@ -83,7 +83,7 @@ module Draftable
 
       end
 
-      save_queue.map &:save
+      save_queue.map(&:save)
 
       # destroy
       (previous_state.keys - current_state.keys).map do |source_record|
@@ -160,7 +160,7 @@ module Draftable
         else
           true
         end
-      end.map &:first
+      end.map(&:first)
     end
 
   end
