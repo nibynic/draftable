@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_02_05_160033) do
+ActiveRecord::Schema.define(version: 2019_02_20_151000) do
 
   create_table "blogs", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -37,6 +37,27 @@ ActiveRecord::Schema.define(version: 2019_02_05_160033) do
     t.index ["draft_master_id"], name: "index_comments_on_draft_master_id"
     t.index ["post_id"], name: "index_comments_on_post_id"
     t.index ["user_id"], name: "index_comments_on_user_id"
+  end
+
+  create_table "footers", force: :cascade do |t|
+    t.text "content"
+    t.integer "post_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["post_id"], name: "index_footers_on_post_id"
+  end
+
+  create_table "headers", force: :cascade do |t|
+    t.text "content"
+    t.integer "post_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "draft_author_type"
+    t.integer "draft_author_id"
+    t.integer "draft_master_id"
+    t.index ["draft_author_type", "draft_author_id"], name: "index_headers_on_draft_author_type_and_draft_author_id"
+    t.index ["draft_master_id"], name: "index_headers_on_draft_master_id"
+    t.index ["post_id"], name: "index_headers_on_post_id"
   end
 
   create_table "photos", force: :cascade do |t|

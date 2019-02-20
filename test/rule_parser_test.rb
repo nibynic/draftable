@@ -11,9 +11,9 @@ module Draftable
           destroy:  { force: [], merge: [] }
         },
         down: {
-          create:   { force: ["blogs", "comments", "content", "photos", "tags", "title"], merge: [] },
-          update:   { force: [], merge: ["blogs", "comments", "content", "photos", "tags", "title"] },
-          destroy:  { force: [], merge: ["blogs", "comments", "content", "photos", "tags", "title"] }
+          create:   { force: ["blogs", "comments", "content", "footer", "header", "photos", "tags", "title"], merge: [] },
+          update:   { force: [], merge: ["blogs", "comments", "content", "footer", "header", "photos", "tags", "title"] },
+          destroy:  { force: [], merge: ["blogs", "comments", "content", "footer", "header", "photos", "tags", "title"] }
         }
       }), RuleParser.new(Post).parse
 
@@ -59,9 +59,9 @@ module Draftable
           destroy:  { force: [], merge: [] }
         },
         down: {
-          create:   { force: [], merge: ["content", "photos", "tags"] },
-          update:   { force: [], merge: ["content", "photos", "tags"] },
-          destroy:   { force: [], merge: ["content", "photos", "tags"] }
+          create:   { force: [], merge: ["content", "footer", "header", "photos", "tags"] },
+          update:   { force: [], merge: ["content", "footer", "header", "photos", "tags"] },
+          destroy:   { force: [], merge: ["content", "footer", "header", "photos", "tags"] }
         }
       }), RuleParser.new(Post, [
         {
@@ -75,9 +75,9 @@ module Draftable
     test "it resolves rules top to bottom" do
       assert_equal ({
         up:   {
-          create:   { force: ["comments", "photos"], merge: ["content"] },
-          update:   { force: ["comments", "photos"], merge: ["content"] },
-          destroy:  { force: ["comments", "photos"], merge: ["content"] }
+          create:   { force: ["comments", "footer", "header", "photos"], merge: ["content"] },
+          update:   { force: ["comments", "footer", "header", "photos"], merge: ["content"] },
+          destroy:  { force: ["comments", "footer", "header", "photos"], merge: ["content"] }
         },
         down: {
           create:   { force: ["title"], merge: ["content", "blogs", "tags"] },
@@ -96,7 +96,7 @@ module Draftable
         }, {
           up: :none,
           down: :merge,
-          except: ["comments", "photos"]
+          except: ["comments", "photos", "footer", "header"]
         }, {
           up: :force,
           down: :none,

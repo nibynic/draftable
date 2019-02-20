@@ -140,6 +140,7 @@ whether the source record is draftable or not.
 | Association             | Draftable                | Non-draftable |
 | ----------------------- | ------------------------ | ------------- |
 | belongs_to              | creates a draft / master | uses source   |
+| has_one                 | creates a draft / master | leaves empty  |
 | has_many                | creates a draft / master | leaves empty  |
 | has_and_belongs_to_many | creates a draft / master | uses source   |
 
