@@ -36,7 +36,7 @@ module Draftable
         source.reload
         @current_state = full_snapshot(source)
       rescue ActiveRecord::RecordNotFound
-        @current_state = {}
+        @current_state = reload_full_snapshot(previous_state)
       end
 
       save_queue = []
@@ -45,7 +45,7 @@ module Draftable
       traverse(destination) do |destination_record|
 
         source_record = reflect(destination_record)
-        if source_record.present? && find_snapshot(current_state, source_record).present?
+        if !destination_record.destroyed? && source_record.present? && find_snapshot(current_state, source_record).present?
 
           current_snapshot = find_snapshot(current_state, source_record)
           destination_snapshot = find_snapshot(destination_state, destination_record)

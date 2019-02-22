@@ -107,13 +107,13 @@ module Draftable
 
       test "it destroys record" do
         author = create(:user)
-        post = create(:post)
-        master = create(:comment, post: post)
-        draft = create(:comment, post: post, draft_master: master, draft_author: author)
+        master_post = create(:post)
+        draft_post = create(:post, draft_master: master_post, draft_author: author)
+        master = create(:comment, post: master_post)
+        draft = create(:comment, post: draft_post, draft_master: master, draft_author: author)
 
-        draft_post = draft.post
         synchronizer = DataSynchronizer.new(master, draft)
-        master.post.destroy
+        master_post.destroy
         synchronizer.synchronize
         draft.reload
 
@@ -134,6 +134,20 @@ module Draftable
 
         assert_nothing_raised { draft_post.reload }
         assert_nil draft_post.draft_master
+      end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_post = create(:post)
+        draft_post = create(:post, draft_master: master_post, draft_author: author)
+        master = create(:comment, post: master_post)
+        draft = create(:comment, post: draft_post, draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        master.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { draft_post.reload }
       end
     end
 
@@ -221,8 +235,10 @@ module Draftable
       test "it destroys record" do
         author = create(:user)
         post = create(:post)
-        master = create(:comment, post: post)
-        draft = create(:comment, post: post, draft_master: master, draft_author: author)
+        master_post = create(:post)
+        draft_post = create(:post, draft_master: master_post, draft_author: author)
+        master = create(:comment, post: master_post)
+        draft = create(:comment, post: draft_post, draft_master: master, draft_author: author)
 
         master_post = master.post
         synchronizer = DataSynchronizer.new(draft, master, merge_up)
@@ -247,6 +263,20 @@ module Draftable
 
         assert_nothing_raised { master_post.reload }
         assert_nil master_post.drafts.first
+      end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_post = create(:post)
+        draft_post = create(:post, draft_master: master_post, draft_author: author)
+        master = create(:comment, post: master_post)
+        draft = create(:comment, post: draft_post, draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        draft.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { master_post.reload }
       end
     end
 

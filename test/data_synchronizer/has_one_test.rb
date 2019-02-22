@@ -104,11 +104,11 @@ module Draftable
 
       test "it destroys record" do
         author = create(:user)
-        header = create(:header)
-        master = create(:post, header: header)
-        draft = create(:post, header: header, draft_master: master, draft_author: author)
+        master_header = create(:header)
+        draft_header = create(:header, draft_master: master_header, draft_author: author)
+        master = create(:post, header: master_header)
+        draft = create(:post, header: draft_header, draft_master: master, draft_author: author)
 
-        draft_header = draft.header
         synchronizer = DataSynchronizer.new(master, draft)
         master.header.destroy
         synchronizer.synchronize
@@ -131,6 +131,20 @@ module Draftable
 
         assert_nothing_raised { draft_header.reload }
         assert_nil draft_header.draft_master
+      end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_header = create(:header)
+        draft_header = create(:header, draft_master: master_header, draft_author: author)
+        master = create(:post, header: master_header)
+        draft = create(:post, header: draft_header, draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        master.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { draft_header.reload }
       end
     end
 
@@ -244,6 +258,20 @@ module Draftable
 
         assert_nothing_raised { master_header.reload }
         assert_nil master_header.drafts.first
+      end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_header = create(:header)
+        draft_header = create(:header, draft_master: master_header, draft_author: author)
+        master = create(:post, header: master_header)
+        draft = create(:post, header: draft_header, draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        draft.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { master_header.reload }
       end
     end
 

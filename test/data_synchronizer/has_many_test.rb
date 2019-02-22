@@ -122,6 +122,20 @@ module Draftable
 
         assert_nothing_raised { draft_comment.reload }
       end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_comment = create(:comment)
+        master = create(:post, comments: [master_comment])
+        draft_comment = create(:comment, draft_master: master_comment, draft_author: author, user: master_comment.user)
+        draft = create(:post, comments: [draft_comment], draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        master.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { draft_comment.reload }
+      end
     end
 
     class UpTest < ActiveSupport::TestCase
@@ -221,6 +235,20 @@ module Draftable
         master_comment = master.comments.first
         synchronizer = DataSynchronizer.new(draft, master, merge_up)
         draft_comment.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { master_comment.reload }
+      end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_comment = create(:comment)
+        master = create(:post, comments: [master_comment])
+        draft_comment = create(:comment, draft_master: master_comment, draft_author: author, user: master_comment.user)
+        draft = create(:post, comments: [draft_comment], draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        draft.destroy
         synchronizer.synchronize
 
         assert_nothing_raised { master_comment.reload }

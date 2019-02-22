@@ -125,6 +125,20 @@ module Draftable
 
         assert_nothing_raised { draft_tag.reload }
       end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_tag = create(:tag, name: "Sample name")
+        master = create(:post, tags: [master_tag])
+        draft_tag = create(:tag, name: "Sample name", draft_master: master_tag, draft_author: author)
+        draft = create(:post, tags: [draft_tag], draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        master_tag.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { draft.reload }
+      end
     end
 
     class UpTest < ActiveSupport::TestCase
@@ -188,7 +202,7 @@ module Draftable
         author = create(:user)
         master = create(:post, tags: [create(:tag)])
         draft = create(:post, draft_master: master, draft_author: author)
-        
+
         synchronizer = DataSynchronizer.new(draft, master, force_up)
         draft.update_attributes(tags: [create(:tag, name: "Sample name", draft_author: author)])
         synchronizer.synchronize
@@ -227,6 +241,20 @@ module Draftable
         synchronizer.synchronize
 
         assert_nothing_raised { master_tag.reload }
+      end
+
+      test "after destroying self it leaves related record intact" do
+        author = create(:user)
+        master_tag = create(:tag, name: "Sample name")
+        master = create(:post, tags: [master_tag])
+        draft_tag = create(:tag, name: "Sample name", draft_master: master_tag, draft_author: author)
+        draft = create(:post, tags: [draft_tag], draft_master: master, draft_author: author)
+
+        synchronizer = DataSynchronizer.new(master, draft)
+        draft_tag.destroy
+        synchronizer.synchronize
+
+        assert_nothing_raised { master.reload }
       end
     end
 

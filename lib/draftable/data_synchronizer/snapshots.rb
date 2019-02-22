@@ -34,6 +34,14 @@ module Draftable
       dict
     end
 
+    def reload_full_snapshot(dict)
+      data = dict.map do |related, data|
+        if (related.reload rescue false)
+          [related, snapshot(related, data.keys)]
+        end
+      end.compact.to_h
+    end
+
     def traverse(record, visited = [], &block)
       visited << record
       keys = (yield(record) || []).map(&:to_s)
