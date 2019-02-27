@@ -1,4 +1,5 @@
 require 'test_helper'
+require "spy"
 
 module Draftable
   module Self
@@ -83,6 +84,24 @@ module Draftable
         synchronizer.synchronize
 
         assert_raise(ActiveRecord::RecordNotFound) { draft.reload }
+      end
+
+      test "it warns when save fails" do
+        author = create(:user)
+        master = create(:post, title: "Unique title")
+
+        class PostWithValidation < Post
+          validates :title, uniqueness: true
+        end
+
+        warn_spy = Spy.on(Rails.logger, :warn)
+
+        assert_no_difference "Post.count" do
+          synchronizer = DataSynchronizer.new(master.becomes(PostWithValidation), { draft_author: author })
+          synchronizer.synchronize
+        end
+
+        assert_equal 'Draftable::Self::DownTest::PostWithValidation synchronization failed due to the errors: {:title=>["has already been taken"]}', warn_spy.calls.first.args.first
       end
     end
 

@@ -65,7 +65,7 @@ module Draftable
 
     test "it creates master" do
       author = create(:user)
-      draft = Post.new(draft_author: author)
+      draft = build(:post, draft_author: author)
 
       new_spy = Spy.on(DataSynchronizer, :new).and_call_through
       synchronize_spy = Spy.on_instance_method(DataSynchronizer, :synchronize)

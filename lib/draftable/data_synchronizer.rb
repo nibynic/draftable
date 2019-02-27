@@ -83,7 +83,11 @@ module Draftable
 
       end
 
-      save_queue.map(&:save)
+      save_queue.each do |destination_record|
+        unless destination_record.save
+          Rails.logger.warn "#{destination_record.class.name} synchronization failed due to the errors: #{destination_record.errors.messages}"
+        end
+      end
 
       # destroy
       (previous_state.keys - current_state.keys).map do |source_record|
