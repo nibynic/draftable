@@ -94,14 +94,15 @@ module Draftable
           validates :title, uniqueness: true
         end
 
-        warn_spy = Spy.on(Rails.logger, :warn)
+        debug_spy = Spy.on(Draftable.logger, :debug)
 
         assert_no_difference "Post.count" do
           synchronizer = DataSynchronizer.new(master.becomes(PostWithValidation), { draft_author: author })
           synchronizer.synchronize
         end
 
-        assert_equal 'Draftable::Self::DownTest::PostWithValidation synchronization failed due to the errors: {:title=>["has already been taken"]}', warn_spy.calls.first.args.first
+        assert_equal '? synchronization failed due to the errors: {:title=>["has already been taken"]}', debug_spy.calls.last.args.first
+        debug_spy.unhook
       end
     end
 

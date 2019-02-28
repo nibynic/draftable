@@ -45,6 +45,9 @@ module Draftable
       traverse(destination) do |destination_record|
 
         source_record = reflect(destination_record)
+
+        Draftable.logger.debug("syncing ? -> ?", source_record, destination_record)
+
         if !destination_record.destroyed? && source_record.present? && find_snapshot(current_state, source_record).present?
 
           current_snapshot = find_snapshot(current_state, source_record)
@@ -73,19 +76,24 @@ module Draftable
               new_data[key] = current_value
             end
           end
+
+          Draftable.logger.debug("  - setting new data:\n?", new_data)
           destination_record.assign_attributes(new_data)
 
           save_queue << destination_record
 
+        else
+
+          Draftable.logger.debug("  - nothing to do")
+
         end
 
         allowed_keys
-
       end
 
       save_queue.each do |destination_record|
         unless destination_record.save
-          Rails.logger.warn "#{destination_record.class.name} synchronization failed due to the errors: #{destination_record.errors.messages}"
+          Draftable.logger.debug("? synchronization failed due to the errors: #{destination_record.errors.messages}", destination_record)
         end
       end
 
@@ -96,8 +104,13 @@ module Draftable
           destination_snapshot = find_snapshot(destination_state, destination_record)
           allowed_keys = allowed_keys_for(destination_record, destination_snapshot, :destroy)
           rule = rules_for(destination_record.class)[:destroy]
-          if (rule[:force] + rule[:merge] - allowed_keys).empty?
+          changed_keys = (rule[:force] + rule[:merge] - allowed_keys)
+          Draftable.logger.debug("destroying ?", destination_record)
+          if changed_keys.empty?
+            Draftable.logger.debug("  - destroyed")
             destination_record.destroy
+          else
+            Draftable.logger.debug("  - not destroyed due to differences in #{changed_keys}")
           end
         end
       end

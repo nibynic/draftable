@@ -158,6 +158,18 @@ Draftable will use `destroy` rules if source record is destroyed. In this case
 listed attributes and destroy only if none of them was changed. If no attributes
 match `destroy` rule, record will not be destroyed.
 
+### Debugging
+
+Sometimes it's hard to guess what Draftable has done and why. In that case
+enabling logging might help:
+
+```ruby
+# in config/initializers/draftable.rb
+Draftable.configure do |config|
+  config.enable_logging = true
+end
+```
+
 ## Contributing
 Contribution directions go here.
 
