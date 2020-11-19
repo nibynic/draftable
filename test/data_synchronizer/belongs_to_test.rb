@@ -37,6 +37,19 @@ module Draftable
         assert_equal master_user, draft_user
       end
 
+      test "it copies polymorphic belongs_to relationships" do
+        author = create(:user)
+        master = create(:comment,
+          parent: create(:user)
+        )
+        draft = master.to_draft(author)
+
+        master_parent = master.parent
+        draft_parent = draft.parent
+
+        assert_equal master_parent, draft_parent
+      end
+
       test "it updates attributes" do
         author = create(:user)
         master_post = create(:post)

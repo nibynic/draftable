@@ -67,7 +67,8 @@ module Draftable
               else
                 allow_copy = reflection.macro == :belongs_to
                 if current_value.present?
-                  new_data[key] = materialize_as_destination(current_value, allow_copy, destination_record.method("build_#{key}"))
+                  builder = destination_record.method("build_#{key}") if destination_record.respond_to?("build_#{key}")
+                  new_data[key] = materialize_as_destination(current_value, allow_copy, builder)
                 else
                   new_data[key] = nil
                 end

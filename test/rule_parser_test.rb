@@ -24,9 +24,9 @@ module Draftable
           destroy:  { force: [], merge: [] },
         },
         down: {
-          create:   { force: ["content", "post", "user"], merge: [] },
-          update:   { force: [], merge: ["content", "post", "user"] },
-          destroy:  { force: [], merge: ["content", "post", "user"] }
+          create:   { force: ["content", "parent", "post", "user"], merge: [] },
+          update:   { force: [], merge: ["content", "parent", "post", "user"] },
+          destroy:  { force: [], merge: ["content", "parent", "post", "user"] }
         }
       }), RuleParser.new(Comment).parse
     end

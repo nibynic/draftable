@@ -98,7 +98,7 @@ module Draftable
         author = create(:user)
         master_comment = create(:comment)
         master = create(:post, comments: [master_comment])
-        draft_comment = create(:comment, draft_master: master_comment, draft_author: author, user: master_comment.user)
+        draft_comment = create(:comment, draft_master: master_comment, draft_author: author, user: master_comment.user, parent: master_comment.parent)
         draft = create(:post, comments: [draft_comment], draft_master: master, draft_author: author)
 
         synchronizer = DataSynchronizer.new(master, draft)
@@ -215,7 +215,7 @@ module Draftable
         author = create(:user)
         master_comment = create(:comment)
         master = create(:post, comments: [master_comment])
-        draft_comment = create(:comment, draft_master: master_comment, draft_author: author, user: master_comment.user)
+        draft_comment = create(:comment, draft_master: master_comment, draft_author: author, user: master_comment.user, parent: master_comment.parent)
         draft = create(:post, comments: [draft_comment], draft_master: master, draft_author: author)
 
         synchronizer = DataSynchronizer.new(draft, master, merge_up)

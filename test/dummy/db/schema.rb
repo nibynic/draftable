@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_02_20_151000) do
+ActiveRecord::Schema.define(version: 2020_11_19_142851) do
 
   create_table "blogs", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -33,8 +33,11 @@ ActiveRecord::Schema.define(version: 2019_02_20_151000) do
     t.integer "draft_author_id"
     t.integer "draft_master_id"
     t.integer "user_id"
+    t.string "parent_type"
+    t.integer "parent_id"
     t.index ["draft_author_type", "draft_author_id"], name: "index_comments_on_draft_author_type_and_draft_author_id"
     t.index ["draft_master_id"], name: "index_comments_on_draft_master_id"
+    t.index ["parent_type", "parent_id"], name: "index_comments_on_parent_type_and_parent_id"
     t.index ["post_id"], name: "index_comments_on_post_id"
     t.index ["user_id"], name: "index_comments_on_user_id"
   end
