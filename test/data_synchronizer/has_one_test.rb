@@ -215,8 +215,7 @@ module Draftable
         author = create(:user)
         master = create(:post, header: create(:header))
         draft = create(:post, header: create(:header), draft_master: master, draft_author: author)
-
-        previous_master_header = master.header
+        
         synchronizer = DataSynchronizer.new(draft, master, force_up)
         draft.update_attributes(header: create(:header, content: "Sample content", draft_author: author))
         synchronizer.synchronize

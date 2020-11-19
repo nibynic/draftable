@@ -232,7 +232,6 @@ module Draftable
         master = create(:comment, post: create(:post))
         draft = create(:comment, post: create(:post), draft_master: master, draft_author: author)
 
-        previous_master_post = master.post
         synchronizer = DataSynchronizer.new(draft, master, force_up)
         draft.update_attributes(post: create(:post, title: "Sample title", draft_author: author))
         synchronizer.synchronize
@@ -247,7 +246,6 @@ module Draftable
 
       test "it destroys record" do
         author = create(:user)
-        post = create(:post)
         master_post = create(:post)
         draft_post = create(:post, draft_master: master_post, draft_author: author)
         master = create(:comment, post: master_post)

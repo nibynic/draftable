@@ -35,7 +35,7 @@ module Draftable
     end
 
     def reload_full_snapshot(dict)
-      data = dict.map do |related, data|
+      dict.map do |related, data|
         if (related.reload rescue false)
           [related, snapshot(related, data.keys)]
         end
