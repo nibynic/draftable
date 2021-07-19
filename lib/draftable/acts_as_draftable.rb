@@ -20,8 +20,8 @@ module Draftable
           @draftable_rules ||= RuleParser.new(self, @draftable_options).parse
         end
 
-        belongs_to :draft_author, {polymorphic: true}.merge(Rails.version.match("5") ? {optional: true} : {})
-        belongs_to :draft_master, {class_name: self.name, inverse_of: :drafts}.merge(Rails.version.match("5") ? {optional: true} : {})
+        belongs_to :draft_author, {polymorphic: true}.merge(Rails.version.to_i >= 5 ? {optional: true} : {})
+        belongs_to :draft_master, {class_name: self.name, inverse_of: :drafts}.merge(Rails.version.to_i >= 5 ? {optional: true} : {})
         has_many :drafts, class_name: self.name, foreign_key: :draft_master_id, inverse_of: :draft_master, dependent: :nullify
 
         scope :draft, -> { where.not(draft_author_id: nil) }
